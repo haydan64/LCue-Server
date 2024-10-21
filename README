@@ -1,0 +1,24 @@
+# LCue Server
+
+LCue Server allows you to combine the power of many different show control devices, such as EOS Light Boards, OSC compatible devices, WLED controllers, DMX devices through art-net and sACN, and our LCue Display software.
+
+## Repositories
+
+- [LCue Display](https://github.com/your-username/LCue-Display)
+- [LCue Control](https://github.com/your-username/LCue-Control): Frontend control interface for managing cues and displays.
+
+## Installation
+
+Follow the instructions in each repository to set up and run the respective components.
+
+## Usage
+
+Once all components are set up, you can start creating and managing your show displays using LCue Display, controlled via LCue Server and LCue Control.
+
+## License
+
+This project is licensed under the Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0). See the LICENSE file for details.
+
+---
+
+Happy cueing! If you have any questions or need help, feel free to reach out.
