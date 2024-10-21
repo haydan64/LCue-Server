@@ -1,0 +1,23 @@
+{
+  "name": "lcue-server",
+  "version": "1.0.0",
+  "description": "Lcue Server is the heart of the system, storing configuration, and handling communication between devices. This is required to use Lcue Control with light boards and wled devices.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Haydan Fisher",
+  "license": "Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0)",
+  "dependencies": {
+    "debug": "^4.3.7",
+    "electron": "^32.2.0",
+    "express": "^4.21.1",
+    "multer": "^1.4.5-lts.1",
+    "node-osc": "^9.1.4",
+    "osc": "^2.4.5",
+    "sacn": "^4.6.0",
+    "socket.io": "^4.8.0",
+    "sqlite3": "^5.1.7"
+  }
+}
