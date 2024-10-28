@@ -2,35 +2,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const sqlite3 = require("sqlite3").verbose();
-const db = new sqlite3.Database('./db/database.sqlite')
 
-const Tables = {
-  triggers: {
-    name: String,
-    id: Number,
-    triggers: Number
-  },
-  cueLists: {
-    name: String,
-    id: Number
-  },
-  cues: {
-    description: String,
-    id: Number,
-    position: Number,
-    list: Number,
-    triggers: Number
-  },
-  actions: {
-    id: Number,
-    action: Array(JSON),
-  },
-  display: {
-    name: String,
-    id: Number
-  }
-}
+const db = require("./db.js")
+
+
 
 process.on('SIGINT', () => {
   db.close((err) => {
@@ -58,6 +33,11 @@ db.serialize(() => {
 const expressApp = express();
 const server = http.createServer(expressApp);
 const io = new Server(server);
+const displayIO = io.of("/display");
+const controlerIO = io.of("/controler")
+
+const displayClients = {};
+const controlerClients = {};
 
 
 
@@ -73,19 +53,32 @@ expressApp.use('/api', (req, res, next) => {
   }
 });
 
+
+
+
 io.on('connection', (socket) => {
   console.log('a device connected');
-
-  // Receive commands from the control page and broadcast them
-  socket.on('showImage', (imageUrl) => {
-    io.emit('showImage', imageUrl);
-  });
-
-  // Handle other commands like playing videos and audio
+  
   socket.on('disconnect', () => {
     console.log('device disconnected');
   });
 });
+
+displayIO.on('connection', (socket) => {
+  console.log('a display connected');
+  
+  socket.on('disconnect', () => {
+    console.log('display disconnected');
+  });
+});
+
+controlerIO.on('connection', (socket) => {
+  console.log('a controler connected');
+  
+  socket.on('disconnect', () => {
+    console.log('controler disconnected');
+  });
+})
 
 server.listen(80, () => {
   console.log('Server is listening on port 80');
