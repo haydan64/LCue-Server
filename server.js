@@ -3,9 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const db = require("./db.js")
+const db = require("./db.js");
 
-
+const { Displays } = require("./Displays.js");
+const { Cues } = require("./Cues.js");
+const { Actions } = require("./Actions.js");
+const Devices = require("./Devices.js");
 
 process.on('SIGINT', () => {
   db.close((err) => {
@@ -34,7 +37,7 @@ const expressApp = express();
 const server = http.createServer(expressApp);
 const io = new Server(server);
 const displayIO = io.of("/display");
-const controlerIO = io.of("/controler")
+const controlerIO = io.of("/controler");
 
 const displayClients = {};
 const controlerClients = {};

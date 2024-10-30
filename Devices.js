@@ -1,6 +1,7 @@
 const { EventEmitter } = require('events');
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./your-database-file.db');
+const db = require("./db");
+
+const osc = require('node-osc');
 
 class Device extends EventEmitter {
     constructor(type, id, options) {
@@ -17,12 +18,38 @@ class Device extends EventEmitter {
 class OSCDevice extends Device {
     constructor(type, id, options) {
         super(type, id, options);
+        this.client = this.connect();
+    }
+    connect() {
+        const client = new osc.Client(this.address, this.port);
+        return client
+    }
+    sendOSCMessage() {
+        this.client.send(address, Number(value));
     }
 }
 
 class EOSDevice extends OSCDevice {
     constructor(type,id, options) {
         super(type,id, options);
+    }
+    nextCue() {
+
+    }
+    prevCue() {
+
+    }
+    gotoCue(cue, cuelist) {
+
+    }
+    submaster() {
+
+    }
+    recallPreset(preset) {
+
+    }
+    pressButton(button) {
+
     }
 }
 
