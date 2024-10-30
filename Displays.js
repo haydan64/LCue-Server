@@ -9,15 +9,31 @@ class Display extends EventEmitter {
         this.startFullscreen = startFullscreen;
         this.startInKiosk = startInKiosk;
         this.files = [];
+        this.playlists.playlists = [];
+        this.on("fileList", (fileList) => {
+            this.files = fileList;
+            this.emit("files",)
+        })
     }
-    displayConnected(name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists) {
-
+    displayConnected(name, alwaysOnTop, startFullscreen, startInKiosk, files, playlists) {
+        if (this.name !== name) this.changeName(name, false);
+        if (this.name !== name) this.changeAlwaysOnTop(alwaysOnTop, false);
+        if (this.name !== name) this.changeStartFullscreen(startFullscreen, false);
+        if (this.name !== name) this.changeStartInKiosk(startInKiosk, false);
+        this.files = files;
+        this.playlists = playlists;
     }
-    showFile() {
-
+    showFile(fileName, transition, transitionDuration) {
+        this.emit("socket", "showFile", fileName, transition, transitionDuration);
     }
     showPlaylist(playlistNumber, options) {
-
+        this.emit("socket", "showPlaylist", playlistNumber, options);
+    }
+    advancePlaylist() {
+        this.emit("socket", "advancePlaylist");
+    }
+    downloadFile(path) {
+        this.emit("socket", "downloadFile", path);
     }
     changeName(newName, pushToDisplay) {
         this.name = sanitizeName(newName);
@@ -32,8 +48,59 @@ class Display extends EventEmitter {
             }
         );
         this.emit("nameChanged", this.name);
-        if(pushToDisplay !== false)  {
-            this.emit("socket", "changeName", this.name)
+        if (pushToDisplay !== false) {
+            this.emit("socket", "displayName", this.name)
+        }
+    }
+    changeAlwaysOnTop(newName, alwaysOnTop) {
+        this.alwaysOnTop = alwaysOnTop;
+        db.run(
+            `UPDATE displays SET alwaysOnTop = ? WHERE id = ?`,
+            [this.alwaysOnTop, id],
+            function (err) {
+                if (err) {
+                    return console.error(err.message);
+                }
+                console.log(`Row(s) updated: ${this.changes}`);
+            }
+        );
+        this.emit("alwaysOnTopChanged", this.alwaysOnTop);
+        if (pushToDisplay !== false) {
+            this.emit("socket", "alwaysOnTop", this.alwaysOnTop)
+        }
+    }
+    changeStartFullscreen(newName, startFullscreen) {
+        this.startFullscreen = startFullscreen;
+        db.run(
+            `UPDATE displays SET startFullscreen = ? WHERE id = ?`,
+            [this.startFullscreen, id],
+            function (err) {
+                if (err) {
+                    return console.error(err.message);
+                }
+                console.log(`Row(s) updated: ${this.changes}`);
+            }
+        );
+        this.emit("startFullscreenChanged", this.startFullscreen);
+        if (pushToDisplay !== false) {
+            this.emit("socket", "startFullscreen", this.startFullscreen)
+        }
+    }
+    changeStartInKiosk(newName, startInKiosk) {
+        this.startInKiosk = startInKiosk;
+        db.run(
+            `UPDATE displays SET startInKiosk = ? WHERE id = ?`,
+            [this.startInKiosk, id],
+            function (err) {
+                if (err) {
+                    return console.error(err.message);
+                }
+                console.log(`Row(s) updated: ${this.changes}`);
+            }
+        );
+        this.emit("startInKioskChanged", this.startInKiosk);
+        if (pushToDisplay !== false) {
+            this.emit("socket", "startInKiosk", this.startInKiosk);
         }
     }
 }
@@ -63,11 +130,19 @@ class Displays {
             registerDisplay(id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists)
         }
     }
-    updateDisplay(id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists) {
-        if (this.displays[id].name !== name) this.displays[id].changeName(name, false)
-    }
     registerDisplay(id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists) {
-        //add display to db
+        // SQL query to insert the display into the database
+        const query = `
+            INSERT INTO displays (id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+        // Add display to the database
+        db.run(query, [id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists], function (err) {
+            if (err) {
+                return console.error(err.message);
+            }
+            console.log(`Row(s) inserted: ${this.changes}`);
+        });
     }
 }
 

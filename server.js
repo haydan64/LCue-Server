@@ -21,15 +21,35 @@ process.on('SIGINT', () => {
 });
 
 db.serialize(() => {
-    // db.run("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
-    // db.run("INSERT INTO users (name) VALUES ('John Doe')");
-    // db.each("SELECT id, name FROM users", (err, row) => {
-    //   if (err) {
-    //     console.error(err.message);
-    //   } else {
-    //     console.log(`${row.id} - ${row.name}`);
-    //   }
-    // });
+    const createTableQueries = [
+        `
+        CREATE TABLE IF NOT EXISTS displays (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            alwaysOnTop INTEGER,
+            startFullScreen INTEGER,
+            startInKiosk INTEGER,
+            files TEXT,
+            playlists TEXT
+        );`,
+        `
+        CREATE TABLE IF NOT EXISTS cues (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            alwaysOnTop INTEGER,
+            startFullScreen INTEGER,
+            startInKiosk INTEGER,
+            files TEXT,
+            playlists TEXT
+        );`,
+    ];
+    db.run(createTableQuery, function (err) {
+        if (err) {
+            return reject(err.message);
+        }
+        console.log('Table checked/created successfully.');
+        resolve();
+    });
 });
 
 
@@ -71,7 +91,7 @@ displayIO.on('connection', (socket) => {
     console.log('a display connected');
     let display;
 
-    socket.on("register", (display) => {
+    socket.on("register", (displayInfo) => {
         if (display.displayVersion > 1) {
             socket.emit("versionMissmatch", {
                 expectedVersion: "0 - 1"
@@ -79,22 +99,24 @@ displayIO.on('connection', (socket) => {
             return;
         }
         display = Displays.displayConnected(
-            display.id,
-            display.name,
-            display.alwaysOnTop,
-            display.startFullscreen,
-            display.startInKiosk,
-            display.files,
-            display.playlists
+            displayInfo.id,
+            displayInfo.name,
+            displayInfo.alwaysOnTop,
+            displayInfo.startFullscreen,
+            displayInfo.startInKiosk,
+            displayInfo.files,
+            displayInfo.playlists
         );
 
-        display.on
+        display.on("socket", (event, ...args) => {
+            socket.emit(event, ...args);
+        })
     })
 
     //Redirect all events to and from Displays
     socket.onAny((eventName, ...args) => {
-        if(display) {
-            displays.emit(eventName, ...args);
+        if (display) {
+            display.emit(eventName, ...args);
         }
     })
 
