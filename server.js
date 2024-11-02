@@ -27,29 +27,24 @@ db.serialize(() => {
             id INTEGER PRIMARY KEY,
             name TEXT,
             alwaysOnTop INTEGER,
-            startFullScreen INTEGER,
-            startInKiosk INTEGER,
-            files TEXT,
-            playlists TEXT
+            startFullscreen INTEGER,
+            startInKiosk INTEGER
         );`,
         `
         CREATE TABLE IF NOT EXISTS cues (
             id INTEGER PRIMARY KEY,
-            name TEXT,
-            alwaysOnTop INTEGER,
-            startFullScreen INTEGER,
-            startInKiosk INTEGER,
-            files TEXT,
-            playlists TEXT
+            position FLOAT
         );`,
     ];
-    db.run(createTableQuery, function (err) {
-        if (err) {
-            return reject(err.message);
-        }
-        console.log('Table checked/created successfully.');
-        resolve();
-    });
+    createTableQueries.forEach((q)=>{
+
+        db.run(q, function (err) {
+            if (err) {
+                return reject(err.message);
+            }
+            console.log('Table checked/created successfully.');
+        });
+    })
 });
 
 
@@ -92,7 +87,7 @@ displayIO.on('connection', (socket) => {
     let display;
 
     socket.on("register", (displayInfo) => {
-        if (display.displayVersion > 1) {
+        if (displayInfo.displayVersion > 1) {
             socket.emit("versionMissmatch", {
                 expectedVersion: "0 - 1"
             });
@@ -110,15 +105,19 @@ displayIO.on('connection', (socket) => {
 
         display.on("socket", (event, ...args) => {
             socket.emit(event, ...args);
+        });
+
+        display.on("sync", (event, ...args)=> {
+            controlerIO.emit("displaySync", display.id, event, ...args);
         })
-    })
+    });
 
     //Redirect all events to and from Displays
     socket.onAny((eventName, ...args) => {
         if (display) {
             display.emit(eventName, ...args);
         }
-    })
+    });
 
 
     socket.on('disconnect', () => {
@@ -128,6 +127,11 @@ displayIO.on('connection', (socket) => {
 
 controlerIO.on('connection', (socket) => {
     console.log('a controler connected');
+
+
+    socket.on("display", (id, event, ...args)=>{
+        Displays.displays[id]?.emit(event, ...args);
+    });
 
     socket.on('disconnect', () => {
         console.log('controler disconnected');
