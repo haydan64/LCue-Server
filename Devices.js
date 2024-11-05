@@ -88,10 +88,14 @@ class Devices extends EventEmitter {
             }
             rows.forEach((row) => {
                 let device;
-                const options = JSON.parse(row.options); // Parse JSON string to object
-                this.addDevice(row.type, row.id, options);
-                
-                this.deviceList[row.id] = device; // Assuming 'id' is a unique identifier for each display
+                try {
+                    const options = JSON.parse(row.options); // Parse JSON string to object
+                    this.addDevice(row.type, row.id, options);
+                    
+                    this.deviceList[row.id] = device; // Assuming 'id' is a unique identifier for each display
+                } catch (e) {
+                    console.error(e);
+                }
             });
             console.log('Displays loaded:', this.deviceList);
         });

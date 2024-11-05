@@ -122,6 +122,17 @@ class Display extends EventEmitter {
             this.emit("socket", "startInKiosk", this.startInKiosk);
         }
     }
+    toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            alwaysOnTop: this.alwaysOnTop,
+            startFullscreen: this.startFullscreen,
+            startInKiosk: this.startInKiosk,
+            files: this.files,
+            playlists: this.playlists
+        }
+    }
 }
 
 function sanitizeName(name) {
@@ -140,6 +151,11 @@ class Displays {
                 this.displays[row.id] = new Display(row.id, row.name, row.alwaysOnTop, row.startFullScreen, row.startInKiosk);
             });
         });
+    }
+    getDisplays() {
+        return Object.entries(this.displays).map(([id, display])=>{
+            return display.toJSON();
+        })
     }
     displayConnected(id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists) {
         if (!this.displays[id]) {

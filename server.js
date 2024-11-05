@@ -128,6 +128,7 @@ displayIO.on('connection', (socket) => {
 controlerIO.on('connection', (socket) => {
     console.log('a controler connected');
 
+    socket.emit("displaysSync", "setDisplays", Displays.getDisplays())
 
     socket.on("display", (id, event, ...args)=>{
         Displays.displays[id]?.emit(event, ...args);
@@ -136,7 +137,7 @@ controlerIO.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('controler disconnected');
     });
-})
+});
 
 server.listen(80, () => {
     console.log('Server is listening on port 80');
