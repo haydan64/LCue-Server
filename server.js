@@ -2,6 +2,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 const db = require("./db.js");
 
@@ -33,7 +38,25 @@ db.serialize(() => {
         `
         CREATE TABLE IF NOT EXISTS cues (
             id INTEGER PRIMARY KEY,
-            position FLOAT
+            position FLOAT,
+            actions TEXT,
+            name TEXT
+        );`,
+        `
+        CREATE TABLE IF NOT EXISTS triggers (
+            id INTEGER PRIMARY KEY,
+            column INTEGER,
+            row INTEGER,
+            color TEXT,
+            icon TEXT,
+            name TEXT,
+            actions TEXT
+        );`,
+        `
+        CREATE TABLE IF NOT EXISTS actions (
+            id INTEGER PRIMARY KEY,
+            type TEXT,
+            options TEXT
         );`,
     ];
     createTableQueries.forEach((q)=>{
@@ -134,6 +157,16 @@ controlerIO.on('connection', (socket) => {
         Displays.displays[id]?.emit(event, ...args);
     });
 
+    socket.on("actions", (event, ...args) => {
+        Actions.emit(event, ...args);
+    });
+
+    socket.on("action", (id, event, ...args) => {
+        Actions.actions[id]?.emit(event, ...args);
+    });
+
+    
+
     socket.on('disconnect', () => {
         console.log('controler disconnected');
     });
@@ -141,4 +174,34 @@ controlerIO.on('connection', (socket) => {
 
 server.listen(80, () => {
     console.log('Server is listening on port 80');
+});
+
+
+//For debugging.
+const v = {};
+rl.on('line', (input) => {
+    const key = input.slice(0,1);
+    const word = input.slice(1);
+    switch(key) {
+        case("/"): {
+            try {
+                console.log(eval(word));
+            } catch(e){
+                console.error(e);
+            }
+            break;
+        }
+        case("#"): {
+            try {
+                db.run(word, function (res, err) {
+                    if (err) {
+                        console.error(err, err.message);
+                    }
+                    console.log(res);
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
+    }
 });
