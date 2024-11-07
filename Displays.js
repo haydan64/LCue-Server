@@ -13,7 +13,7 @@ class Display extends EventEmitter {
         this.playlists = [];
         this.on("fileList", (fileList) => {
             this.files = fileList;
-            this.emit("files", fileList);
+            this.emit("sync", "files", fileList);
         })
         this.on("playlist", (playlists)=> {
             this.playlists = playlists;
@@ -42,8 +42,8 @@ class Display extends EventEmitter {
             this.emit("sync", "playlists", playlists);
         }
     }
-    showFile(fileName, transition, transitionDuration) {
-        this.emit("socket", "showFile", fileName, transition, transitionDuration);
+    showFile(fileName, fileAction, transition, transitionDuration) {
+        this.emit("socket", "showFile", fileName, fileAction, transition, transitionDuration);
     }
     showPlaylist(playlistNumber, options) {
         this.emit("socket", "showPlaylist", playlistNumber, options);
@@ -139,8 +139,9 @@ function sanitizeName(name) {
     return name.replace(/[^a-zA-Z0-9 ]/g, ''); // Remove any characters that are not letters, numbers, or spaces
 }
 
-class Displays {
+class Displays extends EventEmitter {
     constructor() {
+        super();
         this.displays = {};
         db.all("SELECT * FROM displays", (err, rows) => {
             if (err) {
@@ -162,6 +163,7 @@ class Displays {
             this.displays[id] = this.registerDisplay(id, name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists);
         }
         this.displays[id].displayConnected(name, alwaysOnTop, startFullScreen, startInKiosk, files, playlists);
+        this.emit("sync", "displayConnected", )
         return this.displays[id];
     }
     registerDisplay(id, name, alwaysOnTop, startFullScreen, startInKiosk) {

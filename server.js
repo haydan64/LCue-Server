@@ -182,6 +182,12 @@ Actions.on("sync", (event, ...args) => {
 Cues.on("sync", (event, ...args) => {
     controlerIO.emit("cuesSync", event, ...args)
 });
+Displays.on("sync", (event, ...args)=> {
+    controlerIO.emit("displaysSync", event, ...args);
+});
+Devices.on("sync", (event, ...args)=> {
+    controlerIO.emit("devicesSync", event, ...args);
+});
 
 server.listen(80, () => {
     console.log('Server is listening on port 80');

@@ -1,6 +1,6 @@
 const { EventEmitter } = require('events');
 const Devices = require("./Devices.js");
-const Displays = require("./Displays.js");
+const {Displays} = require("./Displays.js");
 const db = require("./db");
 
 class Action {
@@ -16,31 +16,37 @@ class Action {
                 break;
             }
             case ("display"): {
-                const display = Displays.displays[id];
-                if(!display) return;
-                if(this.options.display.action === "file") {
-                    display.showFile(this.options.display.file, this.options.display.transition, this.options.display.durration)
+                console.log(Displays.displays)
+                const display = Displays.displays[this.options.display.id];
+                console.log(display);
+                if (!display) return;
+                if (this.options.display.action === "file") {
+                    display.showFile(this.options.display.file, this.options.display.fileAction, this.options.display.transition, parseFloat(this.options.display.durration)*1000)
                 } else if (this.options.display.action === "playlist") {
                     display.showPlaylist(this.options.display.playlist, {
                         startAtFileNumber: this.options.display.startAt,
                         resumeFromLeftOff: this.options.display.resume,
                         autoAdvance: this.options.display.autoAdvance,
                         transition: this.options.display.transition,
-                        transitionDuration:this.options.display.durration
+                        transitionDuration: this.options.display.durration
                     })
                 }
                 break;
             }
             case ("eos"): {
                 const device = Devices.devices[this.options.eos.id];
+                if(!device) return;
                 switch (this.options.eos.action) {
                     case ("nextCue"): {
+                        device.nextCue();
                         break;
                     }
                     case ("gotoCue"): {
+                        device.gotoCue(cue, cuelist);
                         break;
                     }
                     case ("prevCue"): {
+                        device.prevCue();
                         break;
                     }
                     case ("submaster"): {
@@ -78,14 +84,17 @@ class Actions extends EventEmitter {
             }
             rows.forEach((row) => {
                 const options = JSON.parse(row.options);
-                if(row.type !== options.type) throw new Error("(DB - Actions table) Type Missmatch in options.")
+                if (row.type !== options.type) throw new Error("(DB - Actions table) Type Missmatch in options.")
                 this.addAction(row.id, options);
             });
         });
+        this.on("editAction", (id, options) => {
+            this.editAction(id, options)
+        });
 
-        this.on("triggerAction", (action)=>{
+        this.on("triggerAction", (action) => {
             this.actions[action]?.trigger();
-        })
+        });
     }
     addAction(id, options) {
         this.actions[id] = new Action(id, options);
@@ -93,7 +102,7 @@ class Actions extends EventEmitter {
         return this.actions[id];
     }
     registerAction(options, cb) {
-        if(!options.type) throw new Error("No type was specified in options.")
+        if (!options.type) throw new Error("No type was specified in options.")
         // SQL query to insert the display into the database
         const query = `
             INSERT INTO actions (type, options)
@@ -108,8 +117,22 @@ class Actions extends EventEmitter {
             console.log(`Row(s) inserted: ${this.changes}`);
         });
     }
+
+    editAction(id, options) {
+        const query = `UPDATE actions SET options = ?, type = ? WHERE id = ?`;
+        db.run(query, [JSON.stringify(options), options.type, id], (err) => {
+            if (err) {
+                console.error(`Error updating action in database: ${err.message}`);
+                return;
+            }
+            this.actions[id].options = options;
+            this.actions[id].type = options.type;
+        });
+        this.emit("sync", "actionEdited", id, options);
+    }
+    
     getActions() {
-        return Object.entries(this.actions).map((action)=> {return action[1].toJSON()});
+        return Object.entries(this.actions).map((action) => { return action[1].toJSON() });
     }
 }
 

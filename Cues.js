@@ -204,7 +204,7 @@ class Cues extends EventEmitter {
     createAction(id, options) {
         if (!this.cues[id]) return;
         Actions.registerAction(options, (action) => {
-            this.cues[id].actions.push(action);
+            this.cues[id].actions.push(action.id);
             this.emit("sync", "actionCreated", id, action.toJSON());
 
             const query = `UPDATE cues SET actions = ? WHERE id = ?`;

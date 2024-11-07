@@ -130,10 +130,7 @@ class Devices extends EventEmitter {
     }
 
     registerDevice(type, options) {
-        //Add the device to the db, then add it to the Devices list.
-        let newID = Math.floor(Math.random() * 1e9);
-        let jsonOptions = JSON.stringify(options);
-        db.run()
+        
     }
 
     updateDevice(deviceId, newData) {
