@@ -74,7 +74,7 @@ class WLEDDevice extends Device {
 class Devices extends EventEmitter {
     constructor() {
         super();
-        this.deviceList = {}; // Store devices here
+        this.devices = {}; // Store devices here
         
         // Load displays from database
         this.loadDisplays();
@@ -92,7 +92,7 @@ class Devices extends EventEmitter {
                     const options = JSON.parse(row.options); // Parse JSON string to object
                     this.addDevice(row.type, row.id, options);
                     
-                    this.deviceList[row.id] = device; // Assuming 'id' is a unique identifier for each display
+                    this.devices[row.id] = device; // Assuming 'id' is a unique identifier for each display
                 } catch (e) {
                     console.error(e);
                 }

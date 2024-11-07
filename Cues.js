@@ -19,22 +19,15 @@ class Cue {
         });
     }
 
-    addAction(triggerID) {
-        this.actions.push(triggerID); // Update actions in db 
-        db.run(`UPDATE cues SET actions = ? WHERE id = ?`,
-            [this.actions.join(','), this.id],
-            (err) => {
-                if (err) { console.error(err.message); }
-            }
-        );
-    }
     toJSON() {
+        console.log(this.actions)
         return {
             id: this.id,
+            name: this.name,
             position: this.position,
-            actions: this.actions,
-            next: this.next,
-            prev: this.prev
+            actions: this.actions.filter((action) => { return !!action }),
+            next: this.next?.id || null,
+            prev: this.prev?.id || null
         }
     }
 }
@@ -56,6 +49,11 @@ class Cues extends EventEmitter {
                 this.addCue(row.id, row.position, row.actions.split(",").map((id) => { return parseInt(id) }), row.name)
             });
         });
+        this.on("createNewCue", this.registerCue);
+        this.on("deleteCue", this.deleteCue);
+        this.on("nameCue", this.nameCue);
+        this.on("moveCue", this.moveCue);
+        this.on("createAction", this.createAction);
     }
     putCue(cue, position) {
         if (!this.head) {
@@ -92,25 +90,144 @@ class Cues extends EventEmitter {
         }
     }
     addCue(id, position, actions, name) {
+        console.log(this);
         this.cues[id] = new Cue(id, position, actions, name);
         this.putCue(this.cues[id], position);
+        this.emit("sync", "cueAdded", this.cues[id].toJSON());
         return this.cues[id];
     }
     registerCue(position) {
         // SQL query to insert the display into the database
+        if (typeof position !== 'number') {
+            if (this.tail) {
+                position = Math.floor(this.tail.position + 1);
+            } else position = 1;
+        }
         const query = `
-            INSERT INTO actions (position, actions, name)
+            INSERT INTO cues (position, actions, name)
             VALUES (?, ?, ?)
         `;
-        const addAction = this.addAction;
+        const self = this;
         // Add display to the database
-        db.run(query, [options.type, JSON.stringify(options)], function (err) {
+        db.run(query, [position, "", ""], function (err) {
             if (err) {
                 throw new Error(err.message);
             }
-            addAction(this.lastID, options);
+            self.addCue(this.lastID, position, [], "");
             console.log(`Row(s) inserted: ${this.changes}`);
         });
+    }
+    deleteCue(id) {
+        if (!this.cues[id]) return;
+
+        const cue = this.cues[id];
+
+        // Remove cue from the linked list
+        if (cue.prev) {
+            cue.prev.next = cue.next;
+        } else {
+            // This cue is the head
+            this.head = cue.next;
+        }
+
+        if (cue.next) {
+            cue.next.prev = cue.prev;
+        } else {
+            // This cue is the tail
+            this.tail = cue.prev;
+        }
+
+        // Delete the cue from the database
+        const query = `DELETE FROM cues WHERE id = ?`;
+        db.run(query, id, (err) => {
+            if (err) {
+                console.error(`Error deleting cue from database: ${err.message}`);
+                return;
+            }
+            console.log(`Cue with ID ${id} deleted from database`);
+        });
+
+        // Delete the cue from memory
+        delete this.cues[id];
+
+        // Emit the sync event
+        this.emit("sync", "cueDeleted", id);
+    }
+    nameCue(id, newName) {
+        if (!this.cues[id]) return;
+        const query = `UPDATE cues SET name = ? WHERE id = ?`;
+        db.run(query, [newName, id], (err) => {
+            if (err) {
+                console.error(`Error updating cue name in database: ${err.message}`);
+                return;
+            }
+            this.cues[id].name = newName;
+            this.emit("sync", "cueNamed", id, newName);
+        });
+    }
+    moveCue(id, newPosition) {
+        if (!this.cues[id]) return;
+        // Update the position in the database
+        const query = `UPDATE cues SET position = ? WHERE id = ?`;
+        db.run(query, [newPosition, id], (err) => {
+            if (err) {
+                console.error(`Error updating cue position in database: ${err.message}`);
+                return;
+            }
+            const cue = this.cues[id];
+
+            // Remove cue from the linked list
+            if (cue.prev) {
+                cue.prev.next = cue.next;
+            } else {
+                // This cue is the head
+                this.head = cue.next;
+            }
+
+            if (cue.next) {
+                cue.next.prev = cue.prev;
+            } else {
+                // This cue is the tail
+                this.tail = cue.prev;
+            }
+
+            cue.next = null;
+            cue.prev = null;
+            cue.position = newPosition;
+            console.log(`Cue with ID ${id} moved to new position ${newPosition} in database`);
+
+            // Reinsert the cue in the linked list
+            this.putCue(cue, newPosition);
+            this.emit("sync", "cueMoved", id, newPosition);
+        });
+    }
+    createAction(id, options) {
+        if (!this.cues[id]) return;
+        Actions.registerAction(options, (action) => {
+            this.cues[id].actions.push(action);
+            this.emit("sync", "actionCreated", id, action.toJSON());
+
+            const query = `UPDATE cues SET actions = ? WHERE id = ?`;
+            db.run(query, [
+                this.cues[id].actions.filter((action) => { return !!action }).join(","),
+                id
+            ], (err) => {
+                if (err) {
+                    console.error(`Error updating cue position in database: ${err.message}`);
+                    return;
+                }
+            })
+        });
+    }
+
+    getCues(asJSON) {
+        let cues = [];
+        let current = this.head;
+        while (current) {
+            cues.push(asJSON ? current.toJSON() : current);
+            current = current.next;
+        }
+        return cues;
     }
 }
 

@@ -151,7 +151,9 @@ displayIO.on('connection', (socket) => {
 controlerIO.on('connection', (socket) => {
     console.log('a controler connected');
 
+    socket.emit("actionsSync", "setActions", Actions.getActions());
     socket.emit("displaysSync", "setDisplays", Displays.getDisplays())
+    socket.emit("cuesSync", "setCues", Cues.getCues(true));
 
     socket.on("display", (id, event, ...args)=>{
         Displays.displays[id]?.emit(event, ...args);
@@ -160,16 +162,25 @@ controlerIO.on('connection', (socket) => {
     socket.on("actions", (event, ...args) => {
         Actions.emit(event, ...args);
     });
-
-    socket.on("action", (id, event, ...args) => {
-        Actions.actions[id]?.emit(event, ...args);
-    });
-
     
+    socket.on("cues", (event, ...args) => {
+        Cues.emit(event, ...args);
+    });
 
     socket.on('disconnect', () => {
         console.log('controler disconnected');
     });
+
+    socket.onAny((event, ...args)=>{
+        console.log(`Controller > ${event}`, ...args);
+    })
+});
+
+Actions.on("sync", (event, ...args) => {
+    controlerIO.emit("actionsSync", event, ...args);
+});
+Cues.on("sync", (event, ...args) => {
+    controlerIO.emit("cuesSync", event, ...args)
 });
 
 server.listen(80, () => {
