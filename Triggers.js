@@ -46,52 +46,39 @@ class Triggers extends EventEmitter {
                 this.addTrigger(row.id, row.column, row.row, row.color, row.icon, row.name, row.actions.split(",").map((id) => { return parseInt(id) }))
             });
         });
-        this.on("createNewTrigger", this.registerTrigger);
+        this.on("createNewTrigger", ()=>{
+            console.log("create new trigger")
+            this.registerTrigger()
+        });
         this.on("deleteTrigger", this.deleteTrigger);
         this.on("nameTrigger", this.nameTrigger);
-        this.on("moveTrigger", this.moveTrigger);
         this.on("createAction", this.createAction);
     }
     addTrigger(id, column, row, color, icon, name, actions) {
         this.triggers[id] = new Trigger(id, column, row, color, icon, name, actions);
         this.emit("sync", "triggerAdded", this.triggers[id].toJSON());
+        this.emit("triggerUpdated", this.triggers[id]);
         return this.triggers[id];
     }
-    registerTrigger(name) {
+    registerTrigger() {
         // SQL query to insert the trigger into the database
+        console.log("create new triggers")
         const query = `
             INSERT INTO triggers (name, color, icon, actions, column, row)
-            VALUES (?)
+            VALUES (?, ?, ?, ?, ?, ?)
         `;
         const self = this;
 
-        db.run(query, [name, "#0e4775", "fa-play", "", 0, 0], function (err) {
+        db.run(query, ["", "#0e4775", "fa-play", "", 0, 0], function (err) {
             if (err) {
                 throw new Error(err.message);
             }
-            self.addTrigger(this.lastID, position, [], "");
+            self.addTrigger(this.lastID, 0, 0, "#0e4775", "fa-play", "", []);
             console.log(`Row(s) inserted: ${this.changes}`);
         });
     }
     deleteTrigger(id) {
         if (!this.triggers[id]) return;
-
-        const trigger = this.triggers[id];
-
-        // Remove trigger from the linked list
-        if (trigger.prev) {
-            trigger.prev.next = trigger.next;
-        } else {
-            // This trigger is the head
-            this.head = trigger.next;
-        }
-
-        if (trigger.next) {
-            trigger.next.prev = trigger.prev;
-        } else {
-            // This trigger is the tail
-            this.tail = trigger.prev;
-        }
 
         // Delete the trigger from the database
         const query = `DELETE FROM triggers WHERE id = ?`;
@@ -108,6 +95,7 @@ class Triggers extends EventEmitter {
 
         // Emit the sync event
         this.emit("sync", "triggerDeleted", id);
+        this.emit("deletedTrigger", id);
     }
     nameTrigger(id, newName) {
         if (!this.triggers[id]) return;
@@ -119,42 +107,7 @@ class Triggers extends EventEmitter {
             }
             this.triggers[id].name = newName;
             this.emit("sync", "triggerNamed", id, newName);
-        });
-    }
-    moveTrigger(id, newPosition) {
-        if (!this.triggers[id]) return;
-        // Update the position in the database
-        const query = `UPDATE triggers SET position = ? WHERE id = ?`;
-        db.run(query, [newPosition, id], (err) => {
-            if (err) {
-                console.error(`Error updating trigger position in database: ${err.message}`);
-                return;
-            }
-            const trigger = this.triggers[id];
-
-            // Remove trigger from the linked list
-            if (trigger.prev) {
-                trigger.prev.next = trigger.next;
-            } else {
-                // This trigger is the head
-                this.head = trigger.next;
-            }
-
-            if (trigger.next) {
-                trigger.next.prev = trigger.prev;
-            } else {
-                // This trigger is the tail
-                this.tail = trigger.prev;
-            }
-
-            trigger.next = null;
-            trigger.prev = null;
-            trigger.position = newPosition;
-            console.log(`Trigger with ID ${id} moved to new position ${newPosition} in database`);
-
-            // Reinsert the trigger in the linked list
-            this.putTrigger(trigger, newPosition);
-            this.emit("sync", "triggerMoved", id, newPosition);
+            this.emit("triggerUpdated", this.triggers[id]);
         });
     }
     createAction(id, options) {
@@ -176,14 +129,8 @@ class Triggers extends EventEmitter {
         });
     }
 
-    getTriggers(asJSON) {
-        let triggers = [];
-        let current = this.head;
-        while (current) {
-            triggers.push(asJSON ? current.toJSON() : current);
-            current = current.next;
-        }
-        return triggers;
+    getTriggers() {
+        return Object.entries(this.triggers).map(([id, trigger])=>{return trigger.toJSON});
     }
 }
 

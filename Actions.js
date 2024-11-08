@@ -95,11 +95,29 @@ class Actions extends EventEmitter {
         this.on("triggerAction", (action) => {
             this.actions[action]?.trigger();
         });
+        this.on("deleteAction", this.deleteAction)
     }
     addAction(id, options) {
         this.actions[id] = new Action(id, options);
         this.emit("sync", "addAction", this.actions[id].toJSON())
         return this.actions[id];
+    }
+    deleteAction(actionID) {
+        // Delete the cue from the database
+        const query = `DELETE FROM actions WHERE id = ?`;
+        db.run(query, actionID, (err) => {
+            if (err) {
+                console.error(`Error deleting action from database: ${err.message}`);
+                return;
+            }
+            console.log(`Action with ID ${actionID} deleted from database`);
+        });
+
+        // Delete the cue from memory
+        delete this.actions[actionID];
+
+        // Emit the sync event
+        this.emit("sync", "actionDeleted", actionID);
     }
     registerAction(options, cb) {
         if (!options.type) throw new Error("No type was specified in options.")

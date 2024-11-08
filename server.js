@@ -32,7 +32,7 @@ const { Displays } = require("./Displays.js");
 const { Cues } = require("./Cues.js");
 const { Actions } = require("./Actions.js");
 const Devices = require("./Devices.js");
-const {Triggers} = require('../Control/Triggers.js');
+const {Triggers} = require('./Triggers.js');
 
 process.on('SIGINT', () => {
     db.close((err) => {
@@ -200,6 +200,7 @@ controlerIO.on('connection', (socket) => {
     socket.emit("actionsSync", "setActions", Actions.getActions());
     socket.emit("displaysSync", "setDisplays", Displays.getDisplays())
     socket.emit("cuesSync", "setCues", Cues.getCues(true));
+    socket.emit("triggersSync", "setTriggers", Triggers.getTriggers());
 
     socket.on("display", (id, event, ...args) => {
         Displays.displays[id]?.emit(event, ...args);
@@ -211,6 +212,10 @@ controlerIO.on('connection', (socket) => {
 
     socket.on("cues", (event, ...args) => {
         Cues.emit(event, ...args);
+    });
+
+    socket.on("triggers", (event, ...args) => {
+        Triggers.emit(event, ...args);
     });
 
     socket.on('disconnect', () => {
@@ -227,6 +232,9 @@ Actions.on("sync", (event, ...args) => {
 });
 Cues.on("sync", (event, ...args) => {
     controlerIO.emit("cuesSync", event, ...args)
+});
+Triggers.on("sync", (event, ...args) => {
+    controlerIO.emit("triggersSync", event, ...args)
 });
 Displays.on("sync", (event, ...args) => {
     controlerIO.emit("displaysSync", event, ...args);
