@@ -1,6 +1,24 @@
+const fs = require("fs");
+
+if(!fs.existsSync("PreventUpdate")) update:{
+    console.log("AUTO UPDATE ENABLED");
+
+    const AutoGitUpdate = require('auto-git-update');
+    const config = {
+        repository: 'https://github.com/haydan64/LCue-Server.git',
+        tempLocation: './temp',
+        executeOnComplete: 'npm start', // Command to restart your app
+        exitOnComplete: true
+    };
+    
+    const updater = new AutoGitUpdate(config);
+    updater.autoUpdate();
+}
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const ClientIO = require('socket.io-client');
 const path = require('path');
 const readline = require('readline');
 const rl = readline.createInterface({
@@ -14,6 +32,7 @@ const { Displays } = require("./Displays.js");
 const { Cues } = require("./Cues.js");
 const { Actions } = require("./Actions.js");
 const Devices = require("./Devices.js");
+const {Triggers} = require('../Control/Triggers.js');
 
 process.on('SIGINT', () => {
     db.close((err) => {
@@ -25,6 +44,8 @@ process.on('SIGINT', () => {
     });
 });
 
+function generateRandomID() { const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let randomID = ''; for (let i = 0; i < 12; i++) { const randomIndex = Math.floor(Math.random() * characters.length); randomID += characters[randomIndex]; } return randomID; }
+let serverID;
 db.serialize(() => {
     const createTableQueries = [
         `
@@ -58,8 +79,12 @@ db.serialize(() => {
             type TEXT,
             options TEXT
         );`,
+        `
+        CREATE TABLE IF NOT EXISTS config (
+            serverID TEXT
+        );`,
     ];
-    createTableQueries.forEach((q)=>{
+    createTableQueries.forEach((q) => {
 
         db.run(q, function (err) {
             if (err) {
@@ -67,7 +92,28 @@ db.serialize(() => {
             }
             console.log('Table checked/created successfully.');
         });
-    })
+    });
+
+
+    // Check if serverID exists
+    db.get(`SELECT serverID FROM config`, (err, row) => {
+        if (err) {
+            console.error(err.message);
+            return;
+        }
+        if (row && row.serverID) {
+            serverID = row.serverID
+            console.log(`Existing serverID found: ${row.serverID}`);
+        } else {
+            const newServerID = generateRandomID();
+            console.log(`Generating new serverID: ${newServerID}`);
+            db.run(`INSERT INTO config (serverID) VALUES (?)`, [newServerID], function (err) {
+                if (err) { throw new Error("Couldn't save new Server ID!") }
+                else { console.log('New serverID inserted into config table'); }
+            });
+        }
+    });
+
 });
 
 
@@ -130,7 +176,7 @@ displayIO.on('connection', (socket) => {
             socket.emit(event, ...args);
         });
 
-        display.on("sync", (event, ...args)=> {
+        display.on("sync", (event, ...args) => {
             controlerIO.emit("displaySync", display.id, event, ...args);
         })
     });
@@ -155,14 +201,14 @@ controlerIO.on('connection', (socket) => {
     socket.emit("displaysSync", "setDisplays", Displays.getDisplays())
     socket.emit("cuesSync", "setCues", Cues.getCues(true));
 
-    socket.on("display", (id, event, ...args)=>{
+    socket.on("display", (id, event, ...args) => {
         Displays.displays[id]?.emit(event, ...args);
     });
 
     socket.on("actions", (event, ...args) => {
         Actions.emit(event, ...args);
     });
-    
+
     socket.on("cues", (event, ...args) => {
         Cues.emit(event, ...args);
     });
@@ -171,7 +217,7 @@ controlerIO.on('connection', (socket) => {
         console.log('controler disconnected');
     });
 
-    socket.onAny((event, ...args)=>{
+    socket.onAny((event, ...args) => {
         console.log(`Controller > ${event}`, ...args);
     })
 });
@@ -182,10 +228,10 @@ Actions.on("sync", (event, ...args) => {
 Cues.on("sync", (event, ...args) => {
     controlerIO.emit("cuesSync", event, ...args)
 });
-Displays.on("sync", (event, ...args)=> {
+Displays.on("sync", (event, ...args) => {
     controlerIO.emit("displaysSync", event, ...args);
 });
-Devices.on("sync", (event, ...args)=> {
+Devices.on("sync", (event, ...args) => {
     controlerIO.emit("devicesSync", event, ...args);
 });
 
@@ -194,21 +240,38 @@ server.listen(80, () => {
 });
 
 
+const remoteIO = ClientIO('https://cloudcue.net')
+remoteIO.on('disconnect', ()=>{
+    remoteIO.connect();
+});
+remoteIO.on("remoteConnected", ()=>{
+    remoteIO.emit("triggersList", Triggers.getTriggers());
+});
+Triggers.on("triggerUpdated", (trigger)=>{
+    remoteIO.emit("triggerUpdated", trigger.toJSON());
+});
+Triggers.on("deletedTrigger", (trigger)=>{
+    remoteIO.emit("deletedTrigger", trigger.toJSON());
+});
+remoteIO.on("triggered", (id)=>{
+    Triggers.triggerTrigger(id);
+})
+
 //For debugging.
 const v = {};
 rl.on('line', (input) => {
-    const key = input.slice(0,1);
+    const key = input.slice(0, 1);
     const word = input.slice(1);
-    switch(key) {
-        case("/"): {
+    switch (key) {
+        case ("/"): {
             try {
                 console.log(eval(word));
-            } catch(e){
+            } catch (e) {
                 console.error(e);
             }
             break;
         }
-        case("#"): {
+        case ("#"): {
             try {
                 db.run(word, function (res, err) {
                     if (err) {
@@ -216,7 +279,7 @@ rl.on('line', (input) => {
                     }
                     console.log(res);
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         }
