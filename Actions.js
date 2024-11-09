@@ -19,6 +19,7 @@ class Action {
                 console.log(Displays.displays)
                 const display = Displays.displays[this.options.display.id];
                 console.log(display);
+                console.log(this.options);
                 if (!display) return;
                 if (this.options.display.action === "file") {
                     display.showFile(this.options.display.file, this.options.display.fileAction, this.options.display.transition, parseFloat(this.options.display.durration)*1000)

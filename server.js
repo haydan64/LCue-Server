@@ -248,11 +248,22 @@ server.listen(80, () => {
 });
 
 
-const remoteIO = ClientIO('https://cloudcue.net')
+const remoteIO = ClientIO('https://cloudcue.net/server')
+remoteIO.on('connect', ()=>{
+    remoteIO.emit("register", {
+        id: serverID
+    })
+});
+remoteIO.on('notRegistered', ()=>{
+    remoteIO.emit("register", {
+        id: serverID
+    })
+});
 remoteIO.on('disconnect', ()=>{
     remoteIO.connect();
 });
 remoteIO.on("remoteConnected", ()=>{
+    console.log("remoteConnected");
     remoteIO.emit("triggersList", Triggers.getTriggers());
 });
 Triggers.on("triggerUpdated", (trigger)=>{

@@ -51,8 +51,13 @@ class Triggers extends EventEmitter {
             this.registerTrigger()
         });
         this.on("deleteTrigger", this.deleteTrigger);
+        this.on("triggerTrigger", this.triggerTrigger);
         this.on("nameTrigger", this.nameTrigger);
         this.on("createAction", this.createAction);
+    }
+    triggerTrigger(id) {
+        console.log("TriggerTrigger ID: ", id)
+        this.triggers[id]?.trigger();
     }
     addTrigger(id, column, row, color, icon, name, actions) {
         this.triggers[id] = new Trigger(id, column, row, color, icon, name, actions);
@@ -130,7 +135,7 @@ class Triggers extends EventEmitter {
     }
 
     getTriggers() {
-        return Object.entries(this.triggers).map(([id, trigger])=>{return trigger.toJSON});
+        return Object.entries(this.triggers).map(([id, trigger])=>{return trigger.toJSON()});
     }
 }
 

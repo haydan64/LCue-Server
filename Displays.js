@@ -43,6 +43,7 @@ class Display extends EventEmitter {
         }
     }
     showFile(fileName, fileAction, transition, transitionDuration) {
+        console.log("SHOW FILE")
         this.emit("socket", "showFile", fileName, fileAction, transition, transitionDuration);
     }
     showPlaylist(playlistNumber, options) {
