@@ -6,7 +6,9 @@ if(!fs.existsSync("PreventUpdate")) update:{
     const AutoGitUpdate = require('auto-git-update');
     const config = {
         repository: 'https://github.com/haydan64/LCue-Server.git',
+        fromReleases:false,
         tempLocation: './temp',
+        ignoreFiles: ['db/database.sqlite'],
         executeOnComplete: 'npm start', // Command to restart your app
         exitOnComplete: true
     };
