@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-if(!fs.existsSync("PreventUpdate")) update:{
+if(false) update:{
     console.log("AUTO UPDATE ENABLED");
 
     const AutoGitUpdate = require('auto-git-update');
@@ -111,7 +111,10 @@ db.serialize(() => {
             console.log(`Generating new serverID: ${newServerID}`);
             db.run(`INSERT INTO config (serverID) VALUES (?)`, [newServerID], function (err) {
                 if (err) { throw new Error("Couldn't save new Server ID!") }
-                else { console.log('New serverID inserted into config table'); }
+                else {
+                    serverID = newServerID;
+                    console.log('New serverID inserted into config table');
+                }
             });
         }
     });
