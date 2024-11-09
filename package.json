@@ -10,7 +10,7 @@
   "author": "Haydan Fisher",
   "license": "Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0)",
   "dependencies": {
-    "auto-git-update": "^1.1.1",
+    "auto-git-update": "^2.1.2",
     "debug": "^4.3.7",
     "electron": "^32.2.0",
     "express": "^4.21.1",
